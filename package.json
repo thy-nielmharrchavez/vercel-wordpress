@@ -1,0 +1,26 @@
+{
+  "name": "writerity-static",
+  "version": "1.0.0",
+  "description": "Static copy of writerity.com - Ready for deployment",
+  "main": "crawler.js",
+  "scripts": {
+    "start": "npx http-server public -p 8000 -o",
+    "crawl": "node crawler.js",
+    "serve": "http-server public -p 8000"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  },
+  "keywords": [
+    "static",
+    "website",
+    "crawler",
+    "writerity"
+  ],
+  "author": "",
+  "license": "ISC"
+}
