@@ -1,0 +1,78 @@
+name: AI Ticket Processor
+on:
+  issues:
+    types: [labeled] # Trigger when you add a label like "bot:run"
+  pull_request_review:
+    types: [submitted] # Trigger on new review submissions
+
+jobs:
+  automate-code:
+    if: github.event.label.name == 'bot:run'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: AI Agent Execution
+        # We use an AI Coder Action (like 'gpt-author' or 'heavy-ai') 
+        # to read the issue and write files.
+        uses: stefan-niedermann/issue-to-pull-request@v1
+        with:
+          branch_name: "ai-feature-${{ github.event.issue.number }}"
+          commit_message: "AI generated fix for Issue #${{ github.event.issue.number }}"
+          # The AI reads the issue body as the prompt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+      - name: Get PR Number
+        id: pr
+        run: |
+          PR_NUMBER=$(gh pr list --search "is:open" --json number --jq '.[0].number' -R ${{ github.repository }})
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Assign All Collaborators
+        if: steps.pr.outputs.pr_number != ''
+        run: |
+          gh pr view ${{ steps.pr.outputs.pr_number }} --json assignees -R ${{ github.repository }}
+          COLLABORATORS=$(gh api repos/${{ github.repository }}/collaborators --paginate -q '.[].login' -R ${{ github.repository }})
+          for collaborator in $COLLABORATORS; do
+            gh pr edit ${{ steps.pr.outputs.pr_number }} --add-assignee "$collaborator" -R ${{ github.repository }} || true
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-merge-on-approval:
+    if: github.event_name == 'pull_request_review' && github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Approval Count and Auto Merge
+        run: |
+          APPROVAL_COUNT=$(gh pr view ${{ github.event.pull_request.number }} --json reviews -q '.reviews[] | select(.state=="APPROVED") | .state' -R ${{ github.repository }} | wc -l)
+          echo "Current approvals: $APPROVAL_COUNT"
+          
+          if [ $APPROVAL_COUNT -ge 2 ]; then
+            echo "PR has 2 or more approvals. Merging..."
+            gh pr merge ${{ github.event.pull_request.number }} --auto --squash -R ${{ github.repository }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: npx vercel --prod --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
