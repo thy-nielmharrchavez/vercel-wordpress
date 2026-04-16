@@ -1,0 +1,184 @@
+name: GitHub Copilot AI Agent
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  copilot-process-issue:
+    name: Process with GitHub Copilot AI
+    if: |
+      github.event_name == 'issues' ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, '/ai')) ||
+      github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      codespaces: write
+    outputs:
+      pr_number: ${{ steps.create_pr.outputs.pr_number }}
+      branch_name: ${{ steps.create_pr.outputs.branch_name }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Determine Issue Number
+        id: issue
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            ISSUE_NUM="${{ github.event.inputs.issue_number }}"
+          else
+            ISSUE_NUM="${{ github.event.issue.number }}"
+          fi
+          echo "number=$ISSUE_NUM" >> $GITHUB_OUTPUT
+
+      - name: Fetch Issue Details
+        id: fetch_issue
+        run: |
+          ISSUE_JSON=$(gh issue view ${{ steps.issue.outputs.number }} --json title,body,labels,number,author -R ${{ github.repository }})
+          echo "issue=$ISSUE_JSON" >> $GITHUB_OUTPUT
+          echo "$ISSUE_JSON" | jq .
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Issue Task/Requirement
+        id: task
+        run: |
+          ISSUE_TITLE='${{ fromJson(steps.fetch_issue.outputs.issue).title }}'
+          ISSUE_BODY='${{ fromJson(steps.fetch_issue.outputs.issue).body }}'
+          
+          # Combine title and body as the AI task
+          FULL_TASK="${ISSUE_TITLE}\n\n${ISSUE_BODY}"
+          
+          # Store in output (escaped for use in JSON)
+          ESCAPED_TASK=$(printf '%s\n' "$FULL_TASK" | jq -Rs .)
+          echo "task=$ESCAPED_TASK" >> $GITHUB_OUTPUT
+          echo "issue_title=$ISSUE_TITLE" >> $GITHUB_OUTPUT
+          echo "issue_number=${{ steps.issue.outputs.number }}" >> $GITHUB_OUTPUT
+          echo "📋 Task extracted: $ISSUE_TITLE"
+        shell: bash
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-copilot[bot]"
+          git config user.email "github-copilot[bot]@users.noreply.github.com"
+
+      - name: Create Feature Branch
+        id: branch
+        run: |
+          BRANCH_NAME="ai/issue-${{ steps.issue.outputs.number }}"
+          git checkout -b "$BRANCH_NAME"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "✅ Feature branch created: $BRANCH_NAME"
+
+      - name: Call OpenAI Copilot Processor
+        id: ai_process
+        run: |
+          node .github/scripts/copilot-processor.js
+        env:
+          ISSUE_TASK: ${{ steps.task.outputs.task }}
+          ISSUE_NUMBER: ${{ steps.issue.outputs.number }}
+          ISSUE_TITLE: ${{ steps.task.outputs.issue_title }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for Changes
+        id: changes
+        run: |
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "⚠️ No changes detected"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ Changes detected"
+            git status
+          fi
+
+      - name: Commit AI Changes
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          git add -A
+          git commit -m "AI: Resolve issue #${{ steps.issue.outputs.number }} - ${{ steps.task.outputs.issue_title }}"
+          echo "✅ Changes committed"
+
+      - name: Push Branch and Create PR
+        if: steps.changes.outputs.has_changes == 'true'
+        id: create_pr
+        run: |
+          git push -u origin ${{ steps.branch.outputs.branch_name }}
+          
+          PR_JSON=$(gh pr create \
+            --title "🤖 AI: ${{ steps.task.outputs.issue_title }}" \
+            --body "**AI-Processed Issue**\n\nAutomatically processed by GitHub Copilot AI\n\nCloses #${{ steps.issue.outputs.number }}\n\n**Task:**\n${{ steps.task.outputs.task }}" \
+            --head "${{ steps.branch.outputs.branch_name }}" \
+            --base "main" \
+            -R ${{ github.repository }})
+          
+          PR_NUMBER=$(echo "$PR_JSON" | jq -r '.number')
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "✅ PR created: #$PR_NUMBER"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Request Reviewers
+        if: steps.create_pr.outputs.pr_number != ''
+        run: |
+          MAINTAINERS=$(gh api repos/${{ github.repository }}/collaborators --paginate -q '.[] | select(.permissions.admin == true) | .login' | head -3)
+          for maintainer in $MAINTAINERS; do
+            gh pr edit ${{ steps.create_pr.outputs.pr_number }} --add-reviewer "$maintainer" -R ${{ github.repository }} || true
+          done
+          echo "✅ Reviewers requested"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add Labels and Link Issue
+        if: steps.create_pr.outputs.pr_number != ''
+        run: |
+          gh pr edit ${{ steps.create_pr.outputs.pr_number }} \
+            --add-label "ai-generated,automated" \
+            -R ${{ github.repository }}
+          echo "✅ Labels added"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment on Issue - Success
+        if: steps.changes.outputs.has_changes == 'true'
+        run: |
+          gh issue comment ${{ steps.issue.outputs.number }} \
+            --body "🤖 **Copilot AI Processing Complete**\n\nPR #${{ steps.create_pr.outputs.pr_number }} created with AI-generated changes.\n\nReady for review and merge!" \
+            -R ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Comment on Issue - No Changes
+        if: steps.changes.outputs.has_changes == 'false'
+        run: |
+          gh issue comment ${{ steps.issue.outputs.number }} \
+            --body "⚠️ **Copilot AI Note**\n\nNo changes were needed for this issue, or the issue description needs clarification.\n\nPlease update the issue with more specific requirements." \
+            -R ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true

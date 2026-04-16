@@ -1,0 +1,57 @@
+{
+  "system": {
+    "type": "copilot-ai-automation",
+    "description": "GitHub Copilot AI-powered issue resolution and code generation",
+    "enabled": true
+  },
+  "automation": {
+    "enabled": true,
+    "triggers": {
+      "on_issue_created": true,
+      "on_issue_edited": true,
+      "manual_dispatch": true
+    }
+  },
+  "ai": {
+    "provider": "openai",
+    "model": "gpt-4-turbo",
+    "temperature": 0.7,
+    "max_tokens": 2000,
+    "enabled": true,
+    "system_prompt": "You are a GitHub Copilot AI assistant. Analyze GitHub issues and generate code changes, new files, or modifications needed to resolve them."
+  },
+  "pull_request": {
+    "auto_create": true,
+    "title_prefix": "🤖 AI:",
+    "label": "ai-generated",
+    "assign_reviewers": true,
+    "min_reviewers": 2,
+    "request_from_admins": true,
+    "add_labels": ["ai-generated", "automated"]
+  },
+  "merge": {
+    "auto_merge_enabled": true,
+    "min_approvals": 2,
+    "allow_blocking_reviews": false,
+    "merge_method": "squash",
+    "delete_branch_on_merge": true,
+    "require_status_checks": true
+  },
+  "deployment": {
+    "auto_deploy": true,
+    "deploy_on_merge": true,
+    "environment": "production",
+    "notify_on_complete": true
+  },
+  "github": {
+    "owner": "your-github-username",
+    "repo": "your-repository",
+    "main_branch": "main"
+  },
+  "vercel": {
+    "project_name": "your-vercel-project",
+    "environment": "production",
+    "auto_deploy": true
+  }
+}
+

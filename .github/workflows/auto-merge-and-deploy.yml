@@ -1,0 +1,159 @@
+name: Auto Merge & Deploy to Vercel
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request:
+    types: [synchronize, reopened]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+jobs:
+  check-approvals-and-merge:
+    name: Check Approvals and Auto Merge
+    if: |
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'ai-generated')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Count Approvals
+        id: approvals
+        run: |
+          APPROVAL_COUNT=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json reviews \
+            --jq '[.reviews[] | select(.state == "APPROVED")] | length' \
+            -R ${{ github.repository }})
+          
+          echo "total=$APPROVAL_COUNT" >> $GITHUB_OUTPUT
+          echo "📊 Current approvals: $APPROVAL_COUNT"
+          
+          if [ "$APPROVAL_COUNT" -ge 2 ]; then
+            echo "approved=true" >> $GITHUB_OUTPUT
+            echo "✅ Threshold met (2+ approvals)"
+          else
+            echo "approved=false" >> $GITHUB_OUTPUT
+            echo "⏳ Waiting for more approvals"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for Blocking Reviews
+        id: blocking
+        run: |
+          BLOCKING=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json reviews \
+            --jq '[.reviews[] | select(.state == "CHANGES_REQUESTED")] | length' \
+            -R ${{ github.repository }})
+          
+          if [ "$BLOCKING" -gt 0 ]; then
+            echo "has_blocking=true" >> $GITHUB_OUTPUT
+            echo "🚫 Has blocking reviews: $BLOCKING"
+          else
+            echo "has_blocking=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable Auto Merge
+        if: steps.approvals.outputs.approved == 'true' && steps.blocking.outputs.has_blocking == 'false'
+        run: |
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --squash \
+            --auto \
+            -R ${{ github.repository }} || echo "Auto merge already enabled or PR not ready"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add Comment on Merge Decision
+        if: always()
+        run: |
+          if [ "${{ steps.approvals.outputs.approved }}" == "true" ] && [ "${{ steps.blocking.outputs.has_blocking }}" == "false" ]; then
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "✅ **AI PR Auto-Merge Enabled** - PR has ${{ steps.approvals.outputs.total }} approvals and no blocking reviews. Will merge and deploy shortly." \
+              -R ${{ github.repository }}
+          elif [ "${{ steps.blocking.outputs.has_blocking }}" == "true" ]; then
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "🚫 **Changes Requested** - Cannot auto-merge until blocking reviews are resolved." \
+              -R ${{ github.repository }}
+          else
+            gh pr comment ${{ github.event.pull_request.number }} \
+              --body "⏳ **Awaiting Approvals** - Current: ${{ steps.approvals.outputs.total }}/2 approvals needed." \
+              -R ${{ github.repository }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+  deploy-to-vercel:
+    name: Deploy to Vercel
+    needs: check-approvals-and-merge
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel
+
+      - name: Deploy to Vercel Production
+        run: |
+          vercel --prod \
+            --token ${{ secrets.VERCEL_TOKEN }} \
+            --yes \
+            --confirm
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        continue-on-error: true
+
+      - name: Get Deployment Status
+        id: deploy
+        run: |
+          echo "✅ Deployment initiated"
+          echo "url=https://vercel.com/dashboard" >> $GITHUB_OUTPUT
+
+      - name: Comment Deployment Status on PR
+        if: github.event.pull_request.number
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --body "🚀 **Deployment Started!**\n\nAI changes are being deployed to production.\nMonitor progress: https://vercel.com/dashboard" \
+            -R ${{ github.repository }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Close Related Issue
+        if: github.event.pull_request.body
+        run: |
+          ISSUE_NUMBER=$(echo "${{ github.event.pull_request.body }}" | grep -oE '#[0-9]+' | head -1 | sed 's/#//')
+          if [ -n "$ISSUE_NUMBER" ]; then
+            gh issue close "$ISSUE_NUMBER" \
+              --reason "completed" \
+              -R ${{ github.repository }} || true
+            echo "✅ Issue #$ISSUE_NUMBER closed"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
