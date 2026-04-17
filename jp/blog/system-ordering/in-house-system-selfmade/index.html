@@ -1058,11 +1058,18 @@ var bezel_var = {"ajax_url":"https:\/\/writerity.com\/wp-admin\/admin-ajax.php",
 (function () {
   var btn = document.getElementById('go-to-top');
   if (!btn) return;
+  var ticking = false;
   window.addEventListener('scroll', function () {
-    if (window.pageYOffset > 300) {
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
+    if (!ticking) {
+      window.requestAnimationFrame(function () {
+        if (window.pageYOffset > 300) {
+          btn.classList.add('visible');
+        } else {
+          btn.classList.remove('visible');
+        }
+        ticking = false;
+      });
+      ticking = true;
     }
   });
   btn.addEventListener('click', function () {
