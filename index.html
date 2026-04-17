@@ -117,7 +117,74 @@ textarea.form-control.wpcf7-form-control {
 }
 
 		</style>
-		<style type="text/css" data-type="vc_shortcodes-custom-css">.vc_custom_1769626900718{padding-bottom: 50px !important;}.vc_custom_1762971589890{padding-bottom: 50px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1666160759793{margin-bottom: 20px !important;}.vc_custom_1666160597307{margin-top: 20px !important;}.vc_custom_1762974737102{padding-top: 50px !important;}.vc_custom_1762889603278{margin-bottom: 20px !important;}.vc_custom_1762971152653{margin-bottom: 20px !important;}.vc_custom_1762971314083{margin-bottom: 20px !important;}.vc_custom_1675364950648{margin-bottom: 20px !important;}.vc_custom_1762969880320{padding-top: 50px !important;}</style><noscript><style type="text/css"> .wpb_animate_when_almost_visible { opacity: 1; }</style></noscript></head>
+		<style type="text/css">
+/* Dark Mode Toggle Button */
+.dark-mode-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 20px;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 16px;
+  line-height: 1;
+  transition: all 0.3s ease;
+  color: inherit;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.dark-mode-btn:hover {
+  background: rgba(255,255,255,0.15);
+}
+.dark-mode-btn:focus {
+  outline: 2px solid #503c28;
+  outline-offset: 2px;
+}
+/* Dark Mode Styles */
+body.dark-mode {
+  background-color: #1a1a2e !important;
+  color: #c9c9c9 !important;
+}
+body.dark-mode #wrapper {
+  background-color: #1a1a2e !important;
+}
+body.dark-mode section:not(.dark-bg) {
+  background-color: #1a1a2e !important;
+}
+body.dark-mode section.grey-bg {
+  background-color: #16213e !important;
+}
+body.dark-mode .page-single,
+body.dark-mode article {
+  background-color: #1a1a2e !important;
+}
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6,
+body.dark-mode p,
+body.dark-mode li,
+body.dark-mode a:not(.btn) {
+  color: #c9c9c9 !important;
+}
+body.dark-mode .accordion-title h4 {
+  color: #c9c9c9 !important;
+}
+body.dark-mode .accordion-content {
+  background-color: #16213e !important;
+}
+body.dark-mode .footer-widgets,
+body.dark-mode footer {
+  background-color: #0f0f23 !important;
+}
+body.dark-mode #navbar {
+  background-color: #0f0f23 !important;
+}
+</style>
+<style type="text/css" data-type="vc_shortcodes-custom-css">.vc_custom_1769626900718{padding-bottom: 50px !important;}.vc_custom_1762971589890{padding-bottom: 50px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1762973880495{padding-top: 40px !important;}.vc_custom_1666160759793{margin-bottom: 20px !important;}.vc_custom_1666160597307{margin-top: 20px !important;}.vc_custom_1762974737102{padding-top: 50px !important;}.vc_custom_1762889603278{margin-bottom: 20px !important;}.vc_custom_1762971152653{margin-bottom: 20px !important;}.vc_custom_1762971314083{margin-bottom: 20px !important;}.vc_custom_1675364950648{margin-bottom: 20px !important;}.vc_custom_1762969880320{padding-top: 50px !important;}</style><noscript><style type="text/css"> .wpb_animate_when_almost_visible { opacity: 1; }</style></noscript></head>
 
 
 <body class="home page-template-default page page-id-5200  wpb-js-composer js-comp-ver-5.7 vc_responsive">
@@ -155,6 +222,12 @@ textarea.form-control.wpcf7-form-control {
         
         
         
+        <div class="menu-item">
+          <button id="dark-mode-toggle" class="dark-mode-btn" aria-label="Toggle dark mode" title="Toggle dark mode">
+            <span class="dark-mode-icon">🌙</span>
+          </button>
+        </div>
+
         <div class="menu-item">
           <div class="nav-toggle">
             <a class="menu-toggle" href="#">
@@ -1779,5 +1852,32 @@ var bezel_var = {"ajax_url":"https:\/\/writerity.com\/wp-admin\/admin-ajax.php",
         });
     });
     </script>
+<script>
+(function () {
+  var btn = document.getElementById('dark-mode-toggle');
+  var icon = btn ? btn.querySelector('.dark-mode-icon') : null;
+
+  function applyDarkMode(isDark) {
+    if (isDark) {
+      document.body.classList.add('dark-mode');
+      if (icon) icon.textContent = '☀️';
+    } else {
+      document.body.classList.remove('dark-mode');
+      if (icon) icon.textContent = '🌙';
+    }
+  }
+
+  var saved = localStorage.getItem('darkMode');
+  applyDarkMode(saved === 'enabled');
+
+  if (btn) {
+    btn.addEventListener('click', function () {
+      var isDark = document.body.classList.contains('dark-mode');
+      applyDarkMode(!isDark);
+      localStorage.setItem('darkMode', !isDark ? 'enabled' : 'disabled');
+    });
+  }
+}());
+</script>
     
 </body></html>
