@@ -2049,4 +2049,204 @@ var bezel_var = {"ajax_url":"https:\/\/writerity.com\/wp-admin\/admin-ajax.php",
   checkScroll();
 }());
 </script>
+<style>
+/* ===== Dark Mode Styles (Homepage Only) ===== */
+body.dark-mode {
+  background-color: #121212 !important;
+  color: #e0e0e0 !important;
+}
+body.dark-mode #wrapper,
+body.dark-mode .page-single {
+  background-color: #121212 !important;
+}
+/* Navbar */
+body.dark-mode #navbar,
+body.dark-mode #navbar.dark-menu {
+  background-color: #1e1e1e !important;
+  border-bottom-color: #333 !important;
+}
+body.dark-mode #navbar .navigation-menu > li > a,
+body.dark-mode #navbar.dark-menu .navigation-menu > li > a {
+  color: #e0e0e0 !important;
+}
+body.dark-mode #navbar .navigation-menu > li > a:hover,
+body.dark-mode #navbar.dark-menu .navigation-menu > li > a:hover {
+  color: #c49a6c !important;
+}
+/* Sections & backgrounds */
+body.dark-mode .grey-bg,
+body.dark-mode .vc_row {
+  background-color: #1a1a1a !important;
+}
+body.dark-mode .dark-bg {
+  background-color: #0d0d0d !important;
+}
+/* Text */
+body.dark-mode h1, body.dark-mode h2, body.dark-mode h3,
+body.dark-mode h4, body.dark-mode h5, body.dark-mode h6 {
+  color: #e0e0e0 !important;
+}
+body.dark-mode p, body.dark-mode li, body.dark-mode span,
+body.dark-mode .wpb_text_column, body.dark-mode .wpb_wrapper {
+  color: #c8c8c8 !important;
+}
+/* Links */
+body.dark-mode a {
+  color: #c49a6c !important;
+}
+body.dark-mode a:hover {
+  color: #e8c99a !important;
+}
+/* Separator and borders */
+body.dark-mode hr {
+  border-color: #444 !important;
+}
+body.dark-mode .separator h4 {
+  color: #c49a6c !important;
+}
+/* Cards and boxes */
+body.dark-mode .testimonial-content {
+  border-color: #c49a6c !important;
+  background-color: #1e1e1e !important;
+  color: #c8c8c8 !important;
+}
+/* Footer */
+body.dark-mode footer,
+body.dark-mode .footer-widgets,
+body.dark-mode #footer {
+  background-color: #0d0d0d !important;
+  color: #c8c8c8 !important;
+}
+body.dark-mode footer a,
+body.dark-mode .footer-widgets a,
+body.dark-mode #footer a {
+  color: #c49a6c !important;
+}
+/* Form elements */
+body.dark-mode input, body.dark-mode textarea, body.dark-mode select {
+  background-color: #2a2a2a !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}
+/* Loader */
+body.dark-mode #loader {
+  background-color: #121212 !important;
+}
+/* FAB flyout */
+body.dark-mode #fab-flyout {
+  background: #1e1e1e !important;
+  color: #e0e0e0 !important;
+}
+body.dark-mode #fab-flyout-title {
+  color: #c49a6c !important;
+}
+body.dark-mode .fab-contact-link {
+  color: #e0e0e0 !important;
+  border-color: #333 !important;
+}
+body.dark-mode .fab-contact-link:hover {
+  background-color: #2a2a2a !important;
+  color: #c49a6c !important;
+  border-color: #c49a6c !important;
+}
+/* Dark mode toggle button */
+#dark-mode-toggle {
+  position: fixed;
+  bottom: 30px;
+  left: 30px;
+  z-index: 10001;
+  background-color: #503c28;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  padding: 0 18px 0 0;
+  height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-size: 13px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, min-width 0.4s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+#dark-mode-toggle .dm-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+#dark-mode-toggle .dm-label {
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 0.4s ease, opacity 0.3s ease;
+  padding-left: 0;
+}
+#dark-mode-toggle:hover {
+  background-color: #7a5c3c;
+}
+#dark-mode-toggle:hover .dm-label {
+  max-width: 120px;
+  opacity: 1;
+}
+#dark-mode-toggle:focus {
+  outline: 2px solid #7a5c3c;
+  outline-offset: 2px;
+}
+body.dark-mode #dark-mode-toggle {
+  background-color: #444 !important;
+}
+body.dark-mode #dark-mode-toggle:hover {
+  background-color: #666 !important;
+}
+</style>
+<button id="dark-mode-toggle" aria-label="Toggle dark mode" aria-pressed="false">
+  <span class="dm-icon" id="dm-icon">&#9788;</span>
+  <span class="dm-label" id="dm-label">Dark Mode</span>
+</button>
+<script>
+(function () {
+  var btn = document.getElementById('dark-mode-toggle');
+  var icon = document.getElementById('dm-icon');
+  var label = document.getElementById('dm-label');
+  var STORAGE_KEY = 'writerity-dark-mode';
+
+  function enableDark() {
+    document.body.classList.add('dark-mode');
+    btn.setAttribute('aria-pressed', 'true');
+    icon.innerHTML = '&#9790;';
+    label.textContent = 'Light Mode';
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch (e) {}
+  }
+
+  function disableDark() {
+    document.body.classList.remove('dark-mode');
+    btn.setAttribute('aria-pressed', 'false');
+    icon.innerHTML = '&#9788;';
+    label.textContent = 'Dark Mode';
+    try { localStorage.setItem(STORAGE_KEY, '0'); } catch (e) {}
+  }
+
+  // Restore preference; default is light mode so only act when dark was saved
+  var saved;
+  try { saved = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  if (saved === '1') {
+    enableDark();
+  }
+
+  btn.addEventListener('click', function () {
+    if (document.body.classList.contains('dark-mode')) {
+      disableDark();
+    } else {
+      enableDark();
+    }
+  });
+}());
+</script>
 </body></html>
