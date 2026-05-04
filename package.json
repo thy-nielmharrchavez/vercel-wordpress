@@ -6,7 +6,8 @@
   "scripts": {
     "start": "npx http-server public -p 8000 -o",
     "crawl": "node crawler.js",
-    "serve": "http-server public -p 8000"
+    "serve": "http-server public -p 8000",
+    "build": "echo \"No build step configured — ensure static files are in public/\""
   },
   "dependencies": {
     "axios": "^1.6.0",

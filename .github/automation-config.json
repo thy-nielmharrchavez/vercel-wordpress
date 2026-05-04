@@ -4,6 +4,7 @@
     "description": "GitHub Copilot AI-powered issue resolution and code generation",
     "enabled": true
   },
+
   "automation": {
     "enabled": true,
     "triggers": {
@@ -12,23 +13,27 @@
       "manual_dispatch": true
     }
   },
+
   "ai": {
     "provider": "openai",
     "model": "gpt-4-turbo",
     "temperature": 0.7,
     "max_tokens": 2000,
     "enabled": true,
-    "system_prompt": "You are a GitHub Copilot AI assistant. Analyze GitHub issues and generate code changes, new files, or modifications needed to resolve them."
+    "system_prompt": "You are a GitHub Copilot AI assistant. Analyze GitHub issues and generate code changes, new files, or modifications needed to resolve them. The issue title format is: [ <branch> ] <description>. Always locate the exact file mentioned or inferred from the issue, apply only the requested change, and nothing else."
   },
+
   "pull_request": {
     "auto_create": true,
     "title_prefix": "🤖 AI:",
+    "base_branch": "main",
     "label": "ai-generated",
     "assign_reviewers": true,
     "min_reviewers": 2,
     "request_from_admins": true,
     "add_labels": ["ai-generated", "automated"]
   },
+
   "merge": {
     "auto_merge_enabled": true,
     "min_approvals": 2,
@@ -37,21 +42,29 @@
     "delete_branch_on_merge": true,
     "require_status_checks": true
   },
+
   "deployment": {
     "auto_deploy": true,
     "deploy_on_merge": true,
     "environment": "production",
-    "notify_on_complete": true
+    "notify_on_complete": true,
+    "provider": "appwrite"
   },
+
   "github": {
     "owner": "your-github-username",
     "repo": "your-repository",
     "main_branch": "main"
   },
-  "vercel": {
-    "project_name": "your-vercel-project",
-    "environment": "production",
-    "auto_deploy": true
+
+  "appwrite": {
+    "endpoint": "https://sgp.cloud.appwrite.io/v1",
+    "project_id": "appwrite-wordpress",
+    "function_id": "69f858e700212504813b",
+    "runtime": "node-18.0",
+    "entrypoint": "src/index.js",
+    "build_commands": "npm install && npm run build",
+    "activate_on_deploy": true,
+    "environment": "production"
   }
 }
-

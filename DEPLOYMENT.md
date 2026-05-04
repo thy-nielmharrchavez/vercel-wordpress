@@ -1,28 +1,29 @@
 # Build and Deployment Configuration
 
-## Quick Start for Vercel
+## Quick Start for Appwrite Sites
 
 1. **Connect to Git Repository:**
-   ```bash
-   git init
-   git add .
-   git commit -m "Initial static site"
-   git remote add origin <your-repo-url>
-   git push -u origin main
-   ```
+  ```bash
+  git init
+  git add .
+  git commit -m "Initial static site"
+  git remote add origin <your-repo-url>
+  git push -u origin main
+  ```
 
-2. **Import to Vercel:**
-   - Go to vercel.com
-   - Click "New Project"
-   - Import from Git
-   - Configure:
-     - Build Command: (leave empty - no build needed)
-     - Output Directory: `public`
-     - Root Directory: `.`
+2. **Create an Appwrite Site (Console):**
+  - Go to your Appwrite Console
+  - Create a new Site resource and note the `SITE_ID`
+  - Configure DNS or use the default Appwrite URL
 
-3. **Deploy:**
-   - Click "Deploy"
-   - Site will be live at `writerity.vercel.app`
+3. **Deploy with Appwrite CLI:**
+  - Build your site locally so `public/` contains the output (if applicable)
+  - Deploy:
+    ```bash
+    npm install -g appwrite-cli
+    appwrite client --endpoint "https://<your-appwrite>/v1" --project-id "<PROJECT_ID>" --key "<API_KEY>"
+    appwrite sites createDeployment --siteId "<SITE_ID>" --activate true --code "public" --json
+    ```
 
 ## Environment Setup
 
@@ -53,10 +54,13 @@ Then open http://localhost:8000
 
 ## Production Deployment
 
-### Option 1: Vercel (Easiest)
+### Option 1: Appwrite Sites (Easiest for static)
 ```bash
-npm install -g vercel
-vercel
+npm install -g appwrite-cli
+# Authenticate first:
+appwrite client --endpoint "https://<your-appwrite>/v1" --project-id "<PROJECT_ID>" --key "<API_KEY>"
+# Then deploy the public/ directory:
+appwrite sites createDeployment --siteId "<SITE_ID>" --activate true --code "public" --json
 ```
 
 ### Option 2: GitHub Pages
@@ -133,13 +137,13 @@ git commit -m "Update site content"
 git push
 ```
 
-Vercel will automatically redeploy on push.
+Appwrite deployment is triggered by the repository GitHub Actions workflow on merge.
 
 ## Monitoring
 
-- Check deployment status at vercel.com dashboard
-- Monitor site performance
-- Check browser console for broken links
+-- Check deployment status in the Appwrite Console
+-- Monitor site performance
+-- Check browser console for broken links
 
 ## Troubleshooting
 
